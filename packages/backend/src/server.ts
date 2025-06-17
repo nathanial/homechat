@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
 import type { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from '@homechat/shared';
 
 import { authRouter } from './routes/auth.js';
@@ -12,6 +13,7 @@ import { roomsRouter } from './routes/rooms.js';
 import { messagesRouter } from './routes/messages.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { setupSocketHandlers } from './services/socket.js';
+import { dbGet } from './database/init.js';
 
 export async function createServer() {
   const app = express();
@@ -24,15 +26,46 @@ export async function createServer() {
     SocketData
   >(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+      origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'http://localhost:5174'],
       credentials: true
+    }
+  });
+
+  // Socket.io authentication middleware
+  io.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth.token;
+      if (!token) {
+        return next(new Error('Authentication error'));
+      }
+
+      const payload = jwt.verify(token, process.env.JWT_SECRET || 'secret') as {
+        userId: string;
+        username: string;
+      };
+
+      const user = await dbGet<{ id: string; username: string }>(
+        'SELECT id, username FROM users WHERE id = ?',
+        [payload.userId]
+      );
+
+      if (!user) {
+        return next(new Error('User not found'));
+      }
+
+      socket.data.userId = user.id;
+      socket.data.username = user.username;
+
+      next();
+    } catch (error) {
+      next(new Error('Authentication error'));
     }
   });
 
   // Middleware
   app.use(helmet());
   app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'http://localhost:5174'],
     credentials: true
   }));
   app.use(express.json());

@@ -7,6 +7,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  token: string | null; // Getter for backward compatibility
   login: (authUser: AuthUser) => void;
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
@@ -14,11 +15,14 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      get token() {
+        return get().accessToken;
+      },
       login: (authUser) => {
         const { accessToken, refreshToken, ...user } = authUser;
         set({
