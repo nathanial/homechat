@@ -17,7 +17,8 @@
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint packages/*/src --ext .ts,.tsx",
     "format": "prettier --write \"packages/*/src/**/*.{ts,tsx,js,jsx,json}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --project tsconfig.typecheck.json",
+    "typecheck:watch": "tsc --build --watch"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

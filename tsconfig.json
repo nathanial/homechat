@@ -28,5 +28,11 @@
     { "path": "./packages/shared" },
     { "path": "./packages/backend" }
   ],
-  "exclude": ["packages/frontend/**/*"]
+  "exclude": [
+    "packages/frontend/**/*",
+    "**/dist",
+    "**/node_modules",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
 }

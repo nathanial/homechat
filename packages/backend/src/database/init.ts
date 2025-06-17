@@ -13,7 +13,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // Create database instance
-export const db = new Database(dbPath);
+export const db: Database.Database = new Database(dbPath);
 
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
