@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { loginSchema, registerSchema, refreshTokenSchema } from '@homechat/shared';
 import { register, login, refreshToken, logout } from '../controllers/auth.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-export const authRouter = Router();
+export const authRouter: ExpressRouter = Router();
 
 authRouter.post('/register', async (req, res, next) => {
   try {
