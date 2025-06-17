@@ -1,24 +1,42 @@
-import sqlite3 from 'sqlite3';
-import { promisify } from 'util';
+import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, '../../data/homechat.db');
+const dataDir = path.join(__dirname, '../../data');
+const dbPath = path.join(dataDir, 'homechat.db');
 
-export const db = new sqlite3.Database(dbPath);
+// Ensure data directory exists
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
 
-// Promisify database methods with proper typing
-export const dbRun = promisify(db.run.bind(db)) as (sql: string, params?: any[]) => Promise<void>;
-export const dbGet = promisify(db.get.bind(db)) as <T = any>(sql: string, params?: any[]) => Promise<T | undefined>;
-export const dbAll = promisify(db.all.bind(db)) as <T = any>(sql: string, params?: any[]) => Promise<T[]>;
+// Create database instance
+export const db = new Database(dbPath);
+
+// Enable foreign keys
+db.pragma('foreign_keys = ON');
+
+// Helper functions to match the existing API
+export const dbRun = (sql: string, params?: any[]) => {
+  const stmt = db.prepare(sql);
+  return params ? stmt.run(...params) : stmt.run();
+};
+
+export const dbGet = <T = any>(sql: string, params?: any[]): T | undefined => {
+  const stmt = db.prepare(sql);
+  return params ? stmt.get(...params) as T : stmt.get() as T;
+};
+
+export const dbAll = <T = any>(sql: string, params?: any[]): T[] => {
+  const stmt = db.prepare(sql);
+  return params ? stmt.all(...params) as T[] : stmt.all() as T[];
+};
 
 export async function initializeDatabase() {
-  // Enable foreign keys
-  await dbRun('PRAGMA foreign_keys = ON');
-
   // Create users table
-  await dbRun(`
+  dbRun(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
@@ -33,7 +51,7 @@ export async function initializeDatabase() {
   `);
 
   // Create rooms table
-  await dbRun(`
+  dbRun(`
     CREATE TABLE IF NOT EXISTS rooms (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -44,7 +62,7 @@ export async function initializeDatabase() {
   `);
 
   // Create room_members table
-  await dbRun(`
+  dbRun(`
     CREATE TABLE IF NOT EXISTS room_members (
       room_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
@@ -57,7 +75,7 @@ export async function initializeDatabase() {
   `);
 
   // Create messages table
-  await dbRun(`
+  dbRun(`
     CREATE TABLE IF NOT EXISTS messages (
       id TEXT PRIMARY KEY,
       room_id TEXT NOT NULL,
@@ -75,7 +93,7 @@ export async function initializeDatabase() {
   `);
 
   // Create message_attachments table
-  await dbRun(`
+  dbRun(`
     CREATE TABLE IF NOT EXISTS message_attachments (
       id TEXT PRIMARY KEY,
       message_id TEXT NOT NULL,
@@ -89,7 +107,7 @@ export async function initializeDatabase() {
   `);
 
   // Create refresh_tokens table
-  await dbRun(`
+  dbRun(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
       token TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -100,9 +118,9 @@ export async function initializeDatabase() {
   `);
 
   // Create indices for better performance
-  await dbRun('CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)');
-  await dbRun('CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)');
-  await dbRun('CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id)');
+  dbRun('CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)');
+  dbRun('CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)');
+  dbRun('CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id)');
   
   console.log('Database initialized successfully');
 }

@@ -4,14 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "vite-node --watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@homechat/shared": "*",
+    "@homechat/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
@@ -19,16 +20,21 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "socket.io": "^4.6.1",
-    "sqlite3": "^5.1.7",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vite": "^5.4.19",
+    "vite-node": "^3.2.4"
+  },
+  "optionalDependencies": {
+    "prebuild-install": "^7.1.3"
   }
 }

@@ -13,11 +13,16 @@
     "paths": {
       "@homechat/shared": ["../shared/src/index.ts"],
       "@homechat/shared/*": ["../shared/src/*"]
-    }
+    },
+    "baseUrl": "."
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
   "references": [
     { "path": "../shared" }
-  ]
+  ],
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  }
 }

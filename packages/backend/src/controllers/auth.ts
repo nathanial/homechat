@@ -12,7 +12,7 @@ const REFRESH_TOKEN_EXPIRES = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 export async function register(data: RegisterInput): Promise<AuthUser> {
   // Check if user already exists
-  const existingUser = await dbGet<{ id: string }>(
+  const existingUser = dbGet<{ id: string }>(
     'SELECT id FROM users WHERE username = ? OR email = ?',
     [data.username, data.email]
   );
@@ -26,7 +26,7 @@ export async function register(data: RegisterInput): Promise<AuthUser> {
 
   // Create user
   const userId = uuidv4();
-  await dbRun(
+  dbRun(
     `INSERT INTO users (id, username, email, password_hash, display_name) 
      VALUES (?, ?, ?, ?, ?)`,
     [userId, data.username, data.email, passwordHash, data.displayName]
@@ -34,22 +34,22 @@ export async function register(data: RegisterInput): Promise<AuthUser> {
 
   // Generate tokens
   const accessToken = generateAccessToken(userId, data.username);
-  const refreshToken = await generateRefreshToken(userId);
+  const refreshToken = generateRefreshToken(userId);
 
   // Create family room if it doesn't exist
-  const familyRoom = await dbGet<{ id: string }>('SELECT id FROM rooms WHERE type = ?', ['group']);
+  const familyRoom = dbGet<{ id: string }>('SELECT id FROM rooms WHERE type = ?', ['group']);
   if (!familyRoom) {
     const roomId = uuidv4();
-    await dbRun(
+    dbRun(
       'INSERT INTO rooms (id, name, type) VALUES (?, ?, ?)',
       [roomId, 'Family Chat', 'group']
     );
-    await dbRun(
+    dbRun(
       'INSERT INTO room_members (room_id, user_id) VALUES (?, ?)',
       [roomId, userId]
     );
   } else {
-    await dbRun(
+    dbRun(
       'INSERT INTO room_members (room_id, user_id) VALUES (?, ?)',
       [familyRoom.id, userId]
     );
@@ -81,7 +81,7 @@ interface UserRecord {
 }
 
 export async function login(data: LoginInput): Promise<AuthUser> {
-  const user = await dbGet<UserRecord>(
+  const user = dbGet<UserRecord>(
     `SELECT id, username, email, password_hash, display_name, avatar, status, last_seen, created_at 
      FROM users WHERE username = ?`,
     [data.username]
@@ -92,14 +92,14 @@ export async function login(data: LoginInput): Promise<AuthUser> {
   }
 
   // Update user status
-  await dbRun(
+  dbRun(
     'UPDATE users SET status = ?, last_seen = CURRENT_TIMESTAMP WHERE id = ?',
     ['online', user.id]
   );
 
   // Generate tokens
   const accessToken = generateAccessToken(user.id, user.username);
-  const refreshToken = await generateRefreshToken(user.id);
+  const refreshToken = generateRefreshToken(user.id);
 
   return {
     id: user.id,
@@ -116,7 +116,7 @@ export async function login(data: LoginInput): Promise<AuthUser> {
 }
 
 export async function refreshToken(token: string): Promise<{ accessToken: string; refreshToken: string }> {
-  const tokenData = await dbGet<{ user_id: string; expires_at: string }>(
+  const tokenData = dbGet<{ user_id: string; expires_at: string }>(
     'SELECT user_id, expires_at FROM refresh_tokens WHERE token = ?',
     [token]
   );
@@ -125,7 +125,7 @@ export async function refreshToken(token: string): Promise<{ accessToken: string
     throw new Error('Invalid or expired refresh token');
   }
 
-  const user = await dbGet<{ id: string; username: string }>(
+  const user = dbGet<{ id: string; username: string }>(
     'SELECT id, username FROM users WHERE id = ?',
     [tokenData.user_id]
   );
@@ -135,11 +135,11 @@ export async function refreshToken(token: string): Promise<{ accessToken: string
   }
 
   // Delete old refresh token
-  await dbRun('DELETE FROM refresh_tokens WHERE token = ?', [token]);
+  dbRun('DELETE FROM refresh_tokens WHERE token = ?', [token]);
 
   // Generate new tokens
   const accessToken = generateAccessToken(user.id, user.username);
-  const newRefreshToken = await generateRefreshToken(user.id);
+  const newRefreshToken = generateRefreshToken(user.id);
 
   return { accessToken, refreshToken: newRefreshToken };
 }
@@ -153,11 +153,11 @@ function generateAccessToken(userId: string, username: string): string {
   return jwt.sign({ userId, username }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRES });
 }
 
-async function generateRefreshToken(userId: string): Promise<string> {
+function generateRefreshToken(userId: string): string {
   const token = uuidv4();
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES);
 
-  await dbRun(
+  dbRun(
     'INSERT INTO refresh_tokens (token, user_id, expires_at) VALUES (?, ?, ?)',
     [token, userId, expiresAt.toISOString()]
   );
