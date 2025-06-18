@@ -1,6 +1,7 @@
 import type { Message } from './message';
 import type { Room } from './room';
 import type { User } from './user';
+import type { Document, DocumentUpdate, DocumentAwareness } from './document';
 
 export interface ServerToClientEvents {
   'message:new': (message: Message) => void;
@@ -14,6 +15,11 @@ export interface ServerToClientEvents {
   'typing:start': (data: { roomId: string; userId: string }) => void;
   'typing:stop': (data: { roomId: string; userId: string }) => void;
   'error': (error: { message: string }) => void;
+  'document:update': (update: DocumentUpdate) => void;
+  'document:awareness': (awareness: DocumentAwareness) => void;
+  'document:joined': (data: { documentId: string; document: Document }) => void;
+  'document:left': (data: { documentId: string }) => void;
+  'document:list': (documents: Document[]) => void;
 }
 
 export interface ClientToServerEvents {
@@ -26,6 +32,13 @@ export interface ClientToServerEvents {
   'typing:start': (data: { roomId: string }) => void;
   'typing:stop': (data: { roomId: string }) => void;
   'user:status': (data: { status: User['status'] }) => void;
+  'document:join': (data: { documentId: string }) => void;
+  'document:leave': (data: { documentId: string }) => void;
+  'document:update': (update: DocumentUpdate) => void;
+  'document:awareness': (awareness: DocumentAwareness) => void;
+  'document:create': (data: { title: string; isPublic: boolean }) => void;
+  'document:delete': (data: { documentId: string }) => void;
+  'document:list': () => void;
 }
 
 export interface InterServerEvents {

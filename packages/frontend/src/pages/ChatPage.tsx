@@ -258,8 +258,9 @@ export function ChatPage() {
   );
 }
 
+
 const containerStyles = css`
-  height: 100vh;
+  height: 100%;
   display: flex;
   background: #f5f5f5;
 `;
@@ -312,7 +313,7 @@ const emptyStateStyles = css`
 `;
 
 const loadingStyles = css`
-  height: 100vh;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -3,6 +3,8 @@ import { css } from '@emotion/css';
 import { useAuthStore } from './stores/authStore';
 import { LoginPage } from './pages/LoginPage';
 import { ChatPage } from './pages/ChatPage';
+import { Documents } from './pages/Documents';
+import { Navigation } from './components/Navigation';
 import { useEffect, useState } from 'react';
 
 export function App() {
@@ -57,16 +59,23 @@ export function App() {
   return (
     <Router>
       <div className={appStyles}>
-        <Routes>
-          <Route
-            path="/login"
-            element={!isAuthenticated ? <LoginPage /> : <Navigate to="/" />}
-          />
-          <Route
-            path="/"
-            element={isAuthenticated ? <ChatPage /> : <Navigate to="/login" />}
-          />
-        </Routes>
+        {isAuthenticated && <Navigation />}
+        <div className={contentStyles}>
+          <Routes>
+            <Route
+              path="/login"
+              element={!isAuthenticated ? <LoginPage /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/"
+              element={isAuthenticated ? <ChatPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/documents"
+              element={isAuthenticated ? <Documents /> : <Navigate to="/login" />}
+            />
+          </Routes>
+        </div>
       </div>
     </Router>
   );
@@ -77,6 +86,11 @@ const appStyles = css`
   display: flex;
   flex-direction: column;
   background-color: #f5f5f5;
+`;
+
+const contentStyles = css`
+  flex: 1;
+  overflow: hidden;
 `;
 
 const loadingStyles = css`

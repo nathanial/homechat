@@ -26,10 +26,10 @@
   },
   "references": [
     { "path": "./packages/shared" },
-    { "path": "./packages/backend" }
+    { "path": "./packages/backend" },
+    { "path": "./packages/frontend" }
   ],
   "exclude": [
-    "packages/frontend/**/*",
     "**/dist",
     "**/node_modules",
     "**/*.spec.ts",

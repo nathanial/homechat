@@ -10,15 +10,22 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@homechat/shared": "workspace:*",
     "@emotion/css": "^11.11.2",
     "@emotion/react": "^11.11.3",
+    "@homechat/shared": "workspace:*",
+    "quill": "^2.0.3",
+    "quill-cursors": "^4.0.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.21.2",
     "socket.io-client": "^4.6.1",
-    "zustand": "^4.4.7",
-    "zod": "^3.22.4"
+    "y-prosemirror": "^1.3.5",
+    "y-protocols": "^1.0.6",
+    "y-quill": "^1.0.0",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27",
+    "zod": "^3.22.4",
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@types/react": "^19.0.2",
