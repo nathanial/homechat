@@ -29,12 +29,9 @@ export function ChatPage() {
     getTypingUsersForRoom
   } = useChatStore();
 
-  // Initialize socket connection
+  // Set up socket event handlers
   useEffect(() => {
     if (!user) return;
-
-    // Connect to socket
-    socketService.connect();
 
     // Set up event handlers
     const unsubscribeConnection = socketService.onConnectionChange(setIsConnected);
@@ -73,7 +70,6 @@ export function ChatPage() {
       unsubscribeMessage();
       unsubscribeTyping();
       unsubscribeStatus();
-      socketService.disconnect();
     };
   }, [user, getMessagesForRoom]);
 

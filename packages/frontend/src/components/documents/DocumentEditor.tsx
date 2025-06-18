@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { css } from '@emotion/css';
 import Quill from 'quill';
 import QuillCursors from 'quill-cursors';
@@ -6,6 +6,8 @@ import * as Y from 'yjs';
 import { QuillBinding } from 'y-quill';
 import { WebsocketProvider } from 'y-websocket';
 import type { Document, User } from '@homechat/shared';
+import { useDocumentStore } from '../../stores/documentStore';
+import { socketService } from '../../services/socket';
 import 'quill/dist/quill.snow.css';
 
 interface DocumentEditorProps {
@@ -20,8 +22,43 @@ export function DocumentEditor({ document, currentUser, wsUrl }: DocumentEditorP
   const editorRef = useRef<HTMLDivElement>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [collaborators, setCollaborators] = useState<Map<string, any>>(new Map());
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const quillRef = useRef<Quill | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { updateDocument } = useDocumentStore();
+  
+  // Save document content
+  const saveContent = useCallback(async () => {
+    if (!quillRef.current) return;
+    
+    const content = JSON.stringify(quillRef.current.getContents());
+    setSaveStatus('saving');
+    
+    try {
+      // Update via REST API
+      const response = await fetch(`/api/documents/${document.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ content })
+      });
+      
+      if (response.ok) {
+        setSaveStatus('saved');
+        // Also update local state
+        updateDocument(document.id, { content, updatedAt: new Date() });
+      } else {
+        setSaveStatus('error');
+        console.error('Failed to save document:', response.statusText);
+      }
+    } catch (error) {
+      setSaveStatus('error');
+      console.error('Failed to save document:', error);
+    }
+  }, [document.id, updateDocument]);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -54,6 +91,17 @@ export function DocumentEditor({ document, currentUser, wsUrl }: DocumentEditorP
     // Initialize Y.js
     const ydoc = new Y.Doc();
     const ytext = ydoc.getText('quill');
+    
+    // Set initial content if document has content
+    if (document.content) {
+      try {
+        const delta = JSON.parse(document.content);
+        quill.setContents(delta);
+      } catch (e) {
+        // If content is plain text, set it as text
+        quill.setText(document.content);
+      }
+    }
 
     // Create WebSocket provider with authentication
     const token = (window as any).localStorage.getItem('accessToken');
@@ -126,14 +174,40 @@ export function DocumentEditor({ document, currentUser, wsUrl }: DocumentEditorP
         provider.awareness.setLocalStateField('cursor', null);
       }
     });
+    
+    // Save content on text change (debounced)
+    quill.on('text-change', () => {
+      // Clear existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      
+      // Set new timeout for 2 seconds
+      saveTimeoutRef.current = setTimeout(() => {
+        saveContent();
+      }, 2000);
+    });
+    
+    // Save on blur
+    quill.on('blur', () => {
+      saveContent();
+    });
 
     // Cleanup
     return () => {
+      // Clear save timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      
+      // Save before cleanup
+      saveContent();
+      
       binding.destroy();
       provider.destroy();
       ydoc.destroy();
     };
-  }, [document.id, currentUser, wsUrl]);
+  }, [document.id, currentUser, wsUrl, saveContent]);
 
   return (
     <div className={styles.container}>
@@ -156,6 +230,27 @@ export function DocumentEditor({ document, currentUser, wsUrl }: DocumentEditorP
           <div className={styles.connectionStatus}>
             <div className={`${styles.statusDot} ${isConnected ? styles.connected : styles.disconnected}`} />
             <span>{isConnected ? 'Connected' : 'Connecting...'}</span>
+          </div>
+          
+          <div className={styles.saveStatus}>
+            {saveStatus === 'saving' && (
+              <>
+                <i className="fa-solid fa-circle-notch fa-spin" />
+                <span>Saving...</span>
+              </>
+            )}
+            {saveStatus === 'saved' && (
+              <>
+                <i className="fa-solid fa-check" />
+                <span>Saved</span>
+              </>
+            )}
+            {saveStatus === 'error' && (
+              <>
+                <i className="fa-solid fa-triangle-exclamation" />
+                <span>Save failed</span>
+              </>
+            )}
           </div>
           
           {collaborators.size > 0 && (
@@ -262,6 +357,26 @@ const styles = {
     gap: 8px;
     font-size: 14px;
     color: #6b7280;
+  `,
+  
+  saveStatus: css`
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #6b7280;
+    
+    i {
+      font-size: 12px;
+    }
+    
+    .fa-check {
+      color: #10b981;
+    }
+    
+    .fa-triangle-exclamation {
+      color: #ef4444;
+    }
   `,
   
   statusDot: css`

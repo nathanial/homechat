@@ -134,11 +134,40 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
+      // Wait for socket connection if not connected
+      if (!socketService.isConnected()) {
+        console.log('Waiting for socket connection...');
+        await new Promise<void>((resolve) => {
+          const checkConnection = setInterval(() => {
+            if (socketService.isConnected()) {
+              clearInterval(checkConnection);
+              resolve();
+            }
+          }, 100);
+          
+          // Timeout after 2 seconds
+          setTimeout(() => {
+            clearInterval(checkConnection);
+            resolve();
+          }, 2000);
+        });
+      }
+      
+      console.log('Loading documents, socket connected:', socketService.isConnected());
       socketService.emit('document:list');
       
-      // Wait for the documents list
-      await new Promise<void>((resolve) => {
+      // Wait for the documents list with timeout
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          console.log('Document list timeout - no response from backend');
+          socketService.off('document:list', handleDocumentList);
+          // Set empty documents and resolve if backend doesn't respond
+          set({ documents: [], isLoading: false });
+          resolve();
+        }, 3000); // 3 second timeout
+        
         const handleDocumentList = (documents: DocumentListItem[]): void => {
+          clearTimeout(timeout);
           set({ documents, isLoading: false });
           socketService.off('document:list', handleDocumentList);
           resolve();

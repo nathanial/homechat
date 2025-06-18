@@ -26,14 +26,17 @@ export function Documents() {
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
 
   useEffect(() => {
-    // Load documents on mount
-    loadDocuments();
+    // Load documents on mount with a small delay to ensure socket connection
+    const loadTimer = setTimeout(() => {
+      loadDocuments();
+    }, 100);
 
     // Cleanup on unmount
     return () => {
+      clearTimeout(loadTimer);
       yjsService.disconnectAll();
     };
-  }, []);
+  }, [loadDocuments]);
 
   const handleNewDocument = () => {
     setIsNewDocModalOpen(true);

@@ -6,9 +6,11 @@ import { ChatPage } from './pages/ChatPage';
 import { Documents } from './pages/Documents';
 import { Navigation } from './components/Navigation';
 import { useEffect, useState } from 'react';
+import { socketService } from './services/socket';
 
 export function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
@@ -45,6 +47,19 @@ export function App() {
 
     validateAuth();
   }, [logout]);
+
+  // Establish socket connection when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user && isHydrated && !isValidating) {
+      socketService.connect();
+    }
+    
+    return () => {
+      if (isAuthenticated) {
+        socketService.disconnect();
+      }
+    };
+  }, [isAuthenticated, user, isHydrated, isValidating]);
 
   // Show loading state while hydrating or validating
   if (!isHydrated || isValidating) {
