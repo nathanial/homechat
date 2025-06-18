@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import { loginSchema, registerSchema, refreshTokenSchema } from '@homechat/shared';
 import { register, login, refreshToken, logout } from '../controllers/auth.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, type AuthRequest } from '../middleware/auth.js';
 
 export const authRouter: ExpressRouter = Router();
 
@@ -47,4 +47,10 @@ authRouter.post('/logout', authenticateToken, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+// Validate token endpoint
+authRouter.get('/validate', authenticateToken, async (_req: AuthRequest, res) => {
+  // If we reach here, the token is valid (authenticateToken middleware passed)
+  res.json({ valid: true });
 });
