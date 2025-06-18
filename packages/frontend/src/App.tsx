@@ -9,7 +9,6 @@ import { useEffect, useState } from 'react';
 
 export function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const accessToken = useAuthStore((state) => state.accessToken);
   const logout = useAuthStore((state) => state.logout);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isValidating, setIsValidating] = useState(true);

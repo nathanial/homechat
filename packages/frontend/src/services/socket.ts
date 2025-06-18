@@ -3,10 +3,9 @@ import type {
   ClientToServerEvents, 
   ServerToClientEvents,
   Message,
-  User,
-  Room,
-  TypingEvent
+  User
 } from '@homechat/shared';
+import type { TypingEvent } from '@homechat/shared/types/socket';
 import { useAuthStore } from '../stores/authStore';
 
 class SocketService {
@@ -41,21 +40,24 @@ class SocketService {
       this.messageHandlers.forEach(handler => handler(message));
     });
 
-    this.socket.on('message:updated', (message) => {
-      this.messageHandlers.forEach(handler => handler(message));
+    this.socket.on('message:updated', (update) => {
+      // For now, we don't have a full message update handler
+      console.log('Message updated:', update);
     });
 
-    this.socket.on('message:sent', ({ tempId, message }) => {
+    this.socket.on('message:sent', ({ message }) => {
       // Handle message confirmation - replace temp message with real one
       this.messageHandlers.forEach(handler => handler(message));
     });
 
     this.socket.on('typing:start', (event) => {
-      this.typingHandlers.forEach(handler => handler(event));
+      const typingEvent: TypingEvent = { ...event, isTyping: true };
+      this.typingHandlers.forEach(handler => handler(typingEvent));
     });
 
     this.socket.on('typing:stop', (event) => {
-      this.typingHandlers.forEach(handler => handler(event));
+      const typingEvent: TypingEvent = { ...event, isTyping: false };
+      this.typingHandlers.forEach(handler => handler(typingEvent));
     });
 
     this.socket.on('user:status', ({ userId, status }) => {
@@ -104,6 +106,28 @@ class SocketService {
 
   stopTyping(roomId: string) {
     this.socket?.emit('typing:stop', { roomId });
+  }
+
+  // Document operations
+  emit<E extends keyof ClientToServerEvents>(
+    event: E,
+    ...args: Parameters<ClientToServerEvents[E]>
+  ): void {
+    (this.socket as any)?.emit(event, ...args);
+  }
+
+  on<E extends keyof ServerToClientEvents>(
+    event: E,
+    handler: ServerToClientEvents[E]
+  ): void {
+    (this.socket as any)?.on(event, handler);
+  }
+
+  off<E extends keyof ServerToClientEvents>(
+    event: E,
+    handler: ServerToClientEvents[E]
+  ): void {
+    (this.socket as any)?.off(event, handler);
   }
 
   // Event handlers

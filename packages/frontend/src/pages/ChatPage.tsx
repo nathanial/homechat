@@ -9,11 +9,9 @@ import { MessageInput } from '../components/chat/MessageInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
 import { NewChatModal } from '../components/chat/NewChatModal';
 import type { Message } from '@homechat/shared';
-import type { Room } from '../types';
 
 export function ChatPage() {
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
@@ -21,12 +19,9 @@ export function ChatPage() {
   const {
     rooms,
     activeRoom,
-    messages,
-    typingUsers,
     setRooms,
     setActiveRoom,
     addMessage,
-    updateMessage,
     setMessages,
     setTypingUser,
     setUserOnline,

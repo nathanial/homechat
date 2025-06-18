@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Document, DocumentListItem } from '@homechat/shared';
-import { socketService } from '../services/SocketService';
+import { socketService } from '../services/socket';
+import { useAuthStore } from './authStore';
 
 interface DocumentStore {
   documents: DocumentListItem[];
@@ -53,34 +54,41 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      socketService.emit('document:create', { title, isPublic });
+      // For now, create a local document since backend isn't implemented
+      const newDocument: Document = {
+        id: `doc-${Date.now()}`,
+        title,
+        content: '',
+        ownerId: useAuthStore.getState().user?.id || '',
+        collaborators: [],
+        isPublic,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastEditedBy: useAuthStore.getState().user?.id || '',
+        tags: []
+      };
       
-      // Wait for the document to be created
-      await new Promise<void>((resolve) => {
-        const handleDocumentJoined = ({ document }: { document: Document }) => {
-          set((state) => ({
-            documents: [...state.documents, {
-              id: document.id,
-              title: document.title,
-              preview: '',
-              ownerId: document.ownerId,
-              ownerName: 'You', // This should come from user store
-              collaboratorCount: document.collaborators.length,
-              updatedAt: document.updatedAt,
-              isPublic: document.isPublic,
-              tags: document.tags
-            }],
-            activeDocument: document,
-            activeDocumentId: document.id,
-            isLoading: false
-          }));
-          
-          socketService.off('document:joined', handleDocumentJoined);
-          resolve();
-        };
-        
-        socketService.on('document:joined', handleDocumentJoined);
-      });
+      const newDocListItem: DocumentListItem = {
+        id: newDocument.id,
+        title: newDocument.title,
+        preview: '',
+        ownerId: newDocument.ownerId,
+        ownerName: 'You',
+        collaboratorCount: 0,
+        updatedAt: newDocument.updatedAt,
+        isPublic: newDocument.isPublic,
+        tags: []
+      };
+      
+      set((state) => ({
+        documents: [...state.documents, newDocListItem],
+        activeDocument: newDocument,
+        activeDocumentId: newDocument.id,
+        isLoading: false
+      }));
+      
+      // Still emit to backend for when it's implemented
+      socketService.emit('document:create', { title, isPublic });
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'Failed to create document',
@@ -128,10 +136,18 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     try {
       socketService.emit('document:list');
       
-      // Wait for the documents list
-      await new Promise<void>((resolve) => {
-        const handleDocumentList = (documents: Document[]) => {
-          const documentItems: DocumentListItem[] = documents.map(doc => ({
+      // Wait for the documents list with timeout
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          socketService.off('document:list', handleDocumentList);
+          // For now, return empty list if backend doesn't respond
+          set({ documents: [], isLoading: false });
+          resolve();
+        }, 3000); // 3 second timeout
+        
+        const handleDocumentList = (documents: Document[]): void => {
+          clearTimeout(timeout);
+          const documentItems: DocumentListItem[] = documents.map((doc): DocumentListItem => ({
             id: doc.id,
             title: doc.title,
             preview: doc.content ? 'Document preview...' : 'Empty document',
@@ -162,24 +178,39 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      socketService.emit('document:join', { documentId });
+      // For now, find the document locally
+      const state = get();
+      const documentListItem = state.documents.find(d => d.id === documentId);
       
-      // Wait for join confirmation
-      await new Promise<void>((resolve) => {
-        const handleDocumentJoined = ({ document }: { documentId: string; document: Document }) => {
-          if (document.id === documentId) {
-            set({ 
-              activeDocument: document, 
-              activeDocumentId: documentId,
-              isLoading: false 
-            });
-            socketService.off('document:joined', handleDocumentJoined);
-            resolve();
-          }
+      if (documentListItem) {
+        // Create a mock document from the list item
+        const document: Document = {
+          id: documentListItem.id,
+          title: documentListItem.title,
+          content: '', // Will be synced via Y.js
+          ownerId: documentListItem.ownerId,
+          collaborators: [],
+          isPublic: documentListItem.isPublic,
+          createdAt: new Date(),
+          updatedAt: documentListItem.updatedAt,
+          lastEditedBy: documentListItem.ownerId,
+          tags: documentListItem.tags
         };
         
-        socketService.on('document:joined', handleDocumentJoined);
-      });
+        set({ 
+          activeDocument: document, 
+          activeDocumentId: documentId,
+          isLoading: false 
+        });
+      } else {
+        set({ 
+          error: 'Document not found',
+          isLoading: false 
+        });
+      }
+      
+      // Still emit to backend for when it's implemented
+      socketService.emit('document:join', { documentId });
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'Failed to join document',

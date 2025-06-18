@@ -7,7 +7,6 @@ import { QuillBinding } from 'y-quill';
 import { WebsocketProvider } from 'y-websocket';
 import type { Document, User } from '@homechat/shared';
 import 'quill/dist/quill.snow.css';
-import 'quill-cursors/dist/quill-cursors.css';
 
 interface DocumentEditorProps {
   document: Document;
@@ -45,7 +44,7 @@ export function DocumentEditor({ document, currentUser, wsUrl }: DocumentEditorP
         ],
         cursors: {
           transformOnTextChange: true,
-        }
+        } as any
       },
       placeholder: 'Start writing...',
     });
@@ -102,7 +101,7 @@ export function DocumentEditor({ document, currentUser, wsUrl }: DocumentEditorP
           collabs.set(clientId, state.user);
           
           // Update cursor for this user
-          const cursors = quill.getModule('cursors');
+          const cursors = quill.getModule('cursors') as any;
           if (state.cursor) {
             cursors.createCursor(
               clientId.toString(),
@@ -149,7 +148,7 @@ export function DocumentEditor({ document, currentUser, wsUrl }: DocumentEditorP
               Last edited {formatTimestamp(document.updatedAt)}
             </span>
             {document.lastEditedBy && (
-              <span className={styles.editor}>
+              <span className={styles.editorInfo}>
                 by {document.lastEditedBy}
               </span>
             )}
@@ -249,7 +248,7 @@ const styles = {
   
   lastEdited: css``,
   
-  editor: css`
+  editorInfo: css`
     font-weight: 500;
     color: #4b5563;
   `,
@@ -368,6 +367,36 @@ const styles = {
       border-bottom: 1px solid rgba(0, 0, 0, 0.08);
       background: #fafbfc;
       padding: 12px 16px;
+    }
+    
+    /* Cursor styles */
+    .ql-cursor {
+      position: absolute;
+      width: 2px;
+      height: 1.2em;
+      background-color: currentColor;
+      pointer-events: none;
+      
+      &-flag {
+        position: absolute;
+        top: -12px;
+        left: -2px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 600;
+        white-space: nowrap;
+        user-select: none;
+        pointer-events: none;
+        color: white;
+      }
+      
+      &-selection {
+        position: absolute;
+        background-color: currentColor;
+        opacity: 0.3;
+        pointer-events: none;
+      }
     }
     
     .ql-container {

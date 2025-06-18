@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Message, User, TypingEvent } from '@homechat/shared';
+import type { Message } from '@homechat/shared';
 import type { Room } from '../types';
 
 interface ChatState {

@@ -60,7 +60,7 @@ export function RoomList({ rooms, activeRoomId, onRoomSelect, onNewChat }: RoomL
                     {formatTimestamp(room.lastMessage.createdAt)}
                   </span>
                 )}
-                {room.unreadCount > 0 && (
+                {room.unreadCount && room.unreadCount > 0 && (
                   <span className={styles.unreadBadge}>
                     {room.unreadCount > 99 ? '99+' : room.unreadCount}
                   </span>
