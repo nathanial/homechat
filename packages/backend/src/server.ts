@@ -11,8 +11,10 @@ import { authRouter } from './routes/auth.js';
 import { usersRouter } from './routes/users.js';
 import { roomsRouter } from './routes/rooms.js';
 import { messagesRouter } from './routes/messages.js';
+import documentsRouter from './routes/documents.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { setupSocketHandlers } from './services/socket.js';
+import { setupYjsServer } from './services/yjs-server.js';
 import { dbGet } from './database/init.js';
 
 export async function createServer() {
@@ -82,6 +84,7 @@ export async function createServer() {
   app.use('/api/users', usersRouter);
   app.use('/api/rooms', roomsRouter);
   app.use('/api/messages', messagesRouter);
+  app.use('/api/documents', documentsRouter);
 
   // Health check
   app.get('/health', (_, res) => {
@@ -93,6 +96,9 @@ export async function createServer() {
 
   // Socket.io handlers
   setupSocketHandlers(io);
+
+  // Y.js WebSocket server for collaborative editing
+  setupYjsServer();
 
   return httpServer;
 }

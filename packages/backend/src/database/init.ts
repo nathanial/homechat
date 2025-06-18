@@ -117,10 +117,52 @@ export async function initializeDatabase() {
     )
   `);
 
+  // Create documents table
+  dbRun(`
+    CREATE TABLE IF NOT EXISTS documents (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT DEFAULT '',
+      owner_id TEXT NOT NULL,
+      is_public BOOLEAN DEFAULT FALSE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_edited_by TEXT,
+      FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (last_edited_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  // Create document_collaborators table
+  dbRun(`
+    CREATE TABLE IF NOT EXISTS document_collaborators (
+      document_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      permission TEXT NOT NULL CHECK (permission IN ('read', 'write')),
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (document_id, user_id),
+      FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create document_tags table
+  dbRun(`
+    CREATE TABLE IF NOT EXISTS document_tags (
+      document_id TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      PRIMARY KEY (document_id, tag),
+      FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+    )
+  `);
+
   // Create indices for better performance
   dbRun('CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)');
   dbRun('CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)');
   dbRun('CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id)');
+  dbRun('CREATE INDEX IF NOT EXISTS idx_documents_owner_id ON documents(owner_id)');
+  dbRun('CREATE INDEX IF NOT EXISTS idx_documents_updated_at ON documents(updated_at)');
+  dbRun('CREATE INDEX IF NOT EXISTS idx_document_collaborators_user_id ON document_collaborators(user_id)');
   
   console.log('Database initialized successfully');
 }

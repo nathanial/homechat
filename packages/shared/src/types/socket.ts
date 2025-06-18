@@ -1,7 +1,7 @@
 import type { Message } from './message';
 import type { Room } from './room';
 import type { User } from './user';
-import type { Document, DocumentUpdate, DocumentAwareness } from './document';
+import type { Document, DocumentUpdate, DocumentAwareness, DocumentListItem } from './document';
 
 export interface ServerToClientEvents {
   'message:new': (message: Message) => void;
@@ -19,7 +19,12 @@ export interface ServerToClientEvents {
   'document:awareness': (awareness: DocumentAwareness) => void;
   'document:joined': (data: { documentId: string; document: Document }) => void;
   'document:left': (data: { documentId: string }) => void;
-  'document:list': (documents: Document[]) => void;
+  'document:list': (documents: DocumentListItem[]) => void;
+  'document:created': (document: Document) => void;
+  'document:shared': (document: Document) => void;
+  'document:deleted': (data: { documentId: string }) => void;
+  'document:collaborator:joined': (data: { documentId: string; userId: string; username: string }) => void;
+  'document:collaborator:left': (data: { documentId: string; userId: string }) => void;
 }
 
 export interface ClientToServerEvents {

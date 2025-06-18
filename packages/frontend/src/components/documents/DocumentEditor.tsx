@@ -55,17 +55,14 @@ export function DocumentEditor({ document, currentUser, wsUrl }: DocumentEditorP
     const ydoc = new Y.Doc();
     const ytext = ydoc.getText('quill');
 
-    // Create WebSocket provider
+    // Create WebSocket provider with authentication
+    const token = (window as any).localStorage.getItem('accessToken');
+    const wsUrlWithAuth = `${wsUrl}?token=${encodeURIComponent(token || '')}&userId=${currentUser.id}`;
+    
     const provider = new WebsocketProvider(
-      wsUrl,
+      wsUrlWithAuth,
       `document-${document.id}`,
-      ydoc,
-      {
-        params: {
-          userId: currentUser.id,
-          documentId: document.id,
-        }
-      }
+      ydoc
     );
 
     providerRef.current = provider;

@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import type { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from '@homechat/shared';
 import { dbRun, dbGet, dbAll } from '../database/init.js';
 import { v4 as uuidv4 } from 'uuid';
+import * as documentsController from '../controllers/documents.js';
 
 // Map to track user socket connections
 const userSockets = new Map<string, Set<string>>();
@@ -163,6 +164,106 @@ export function setupSocketHandlers(
 
     socket.on('typing:stop', ({ roomId }) => {
       socket.to(roomId).emit('typing:stop', { roomId, userId });
+    });
+
+    // Document handlers
+    socket.on('document:list', async () => {
+      try {
+        const documents = await documentsController.getUserDocuments(userId);
+        socket.emit('document:list', documents as any);
+      } catch (error) {
+        console.error('Error listing documents:', error);
+        socket.emit('error', { message: 'Failed to list documents' });
+      }
+    });
+
+    socket.on('document:create', async ({ title, isPublic }) => {
+      try {
+        const document = await documentsController.createDocument(userId, title, isPublic);
+        socket.emit('document:created', document);
+        
+        // Notify collaborators if needed
+        if (document.collaborators.length > 0) {
+          document.collaborators.forEach(collaboratorId => {
+            const collaboratorSockets = userSockets.get(collaboratorId);
+            if (collaboratorSockets) {
+              collaboratorSockets.forEach(socketId => {
+                io.to(socketId).emit('document:shared', document);
+              });
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error creating document:', error);
+        socket.emit('error', { message: 'Failed to create document' });
+      }
+    });
+
+    socket.on('document:join', async ({ documentId }) => {
+      try {
+        const document = await documentsController.getDocument(documentId, userId);
+        if (!document) {
+          socket.emit('error', { message: 'Document not found or access denied' });
+          return;
+        }
+        
+        // Join document room for real-time updates
+        socket.join(`document:${documentId}`);
+        socket.emit('document:joined', { documentId, document });
+        
+        // Notify other collaborators
+        socket.to(`document:${documentId}`).emit('document:collaborator:joined', {
+          documentId,
+          userId,
+          username: socket.data.username || 'User'
+        });
+      } catch (error) {
+        console.error('Error joining document:', error);
+        socket.emit('error', { message: 'Failed to join document' });
+      }
+    });
+
+    socket.on('document:leave', ({ documentId }) => {
+      socket.leave(`document:${documentId}`);
+      
+      // Notify other collaborators
+      socket.to(`document:${documentId}`).emit('document:collaborator:left', {
+        documentId,
+        userId
+      });
+    });
+
+    socket.on('document:update', async (update) => {
+      try {
+        // The update from client contains documentId, update (Uint8Array), and userId
+        // We don't process Y.js updates in the backend, just broadcast them
+        io.to(`document:${update.documentId}`).emit('document:update', update);
+      } catch (error) {
+        console.error('Error broadcasting document update:', error);
+        socket.emit('error', { message: 'Failed to broadcast document update' });
+      }
+    });
+
+    socket.on('document:delete', async ({ documentId }) => {
+      try {
+        const success = await documentsController.deleteDocument(documentId, userId);
+        if (!success) {
+          socket.emit('error', { message: 'Failed to delete document' });
+          return;
+        }
+        
+        // Notify all collaborators about deletion
+        io.to(`document:${documentId}`).emit('document:deleted', { documentId });
+        
+        // Remove all sockets from the document room
+        const socketsInRoom = await io.in(`document:${documentId}`).fetchSockets();
+        for (const socket of socketsInRoom) {
+          socket.leave(`document:${documentId}`);
+        }
+      } catch (error) {
+        console.error('Error deleting document:', error);
+        socket.emit('error', { message: 'Failed to delete document' });
+      }
     });
 
     // Disconnect handling
